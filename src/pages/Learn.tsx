@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import TruthLensHeader from "@/components/TruthLensHeader";
+import TruthLensFooter from "@/components/TruthLensFooter";
 
 const Learn = () => {
   const [activeTab, setActiveTab] = useState("overview");
@@ -173,53 +175,57 @@ const Learn = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <section className="relative py-16 lg:py-20 overflow-hidden">
-        <div 
-          className="absolute inset-0 opacity-10"
-          style={{ background: "var(--truthlens-gradient)" }}
-        />
-        <div className="container relative mx-auto px-4 lg:px-6">
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-              Learn to Identify Misinformation
-            </h1>
-            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-              Educational resources to become a digital fact-checker
-            </p>
+    <div className="min-h-screen flex flex-col">
+      <TruthLensHeader />
+      <main className="flex-1">
+        {/* Hero Section */}
+        <section className="relative py-16 lg:py-20 overflow-hidden">
+          <div 
+            className="absolute inset-0 opacity-10"
+            style={{ background: "var(--truthlens-gradient)" }}
+          />
+          <div className="container relative mx-auto px-4 lg:px-6">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+                Learn to Identify Misinformation
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+                Educational resources to become a digital fact-checker
+              </p>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Navigation Tabs */}
-      <section className="py-8 bg-card border-b border-border">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {tabs.map((tab) => (
-              <Button
-                key={tab.id}
-                variant={activeTab === tab.id ? "default" : "ghost"}
-                size="sm"
-                onClick={() => setActiveTab(tab.id)}
-                className="flex items-center gap-2"
-              >
-                <span>{tab.icon}</span>
-                <span className="hidden sm:inline">{tab.label}</span>
-              </Button>
-            ))}
+        {/* Navigation Tabs */}
+        <section className="py-8 bg-card border-b border-border">
+          <div className="container mx-auto px-4 lg:px-6">
+            <div className="flex flex-wrap gap-2 justify-center">
+              {tabs.map((tab) => (
+                <Button
+                  key={tab.id}
+                  variant={activeTab === tab.id ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex items-center gap-2"
+                >
+                  <span>{tab.icon}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Content Sections */}
-      <section className="py-12">
-        <div className="container mx-auto px-4 lg:px-6">
-          <div className="max-w-4xl mx-auto">
-            {renderTabContent()}
+        {/* Content Sections */}
+        <section className="py-12">
+          <div className="container mx-auto px-4 lg:px-6">
+            <div className="max-w-4xl mx-auto">
+              {renderTabContent()}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </main>
+      <TruthLensFooter />
     </div>
   );
 };
