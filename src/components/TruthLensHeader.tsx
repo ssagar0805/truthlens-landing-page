@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Link, useLocation } from "react-router-dom";
 import magnifyingGlassIcon from "@/assets/magnifying-glass.png";
 
 const TruthLensHeader = () => {
+  const location = useLocation();
   const [activeSection, setActiveSection] = useState("home");
 
   const scrollToSection = (sectionId: string) => {
@@ -17,54 +19,56 @@ const TruthLensHeader = () => {
     }
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border">
       <div className="container mx-auto px-4 lg:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <img 
               src={magnifyingGlassIcon} 
               alt="TruthLens Logo"
               className="h-8 w-8"
             />
             <span className="text-xl font-bold text-foreground">TruthLens</span>
-          </div>
+          </Link>
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <button
-              onClick={() => scrollToSection("home")}
+            <Link
+              to="/"
               className={`text-sm font-medium transition-colors hover:text-primary ${
-                activeSection === "home" ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
+                isActive("/") ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
               }`}
             >
               Home
-            </button>
-            <button
-              onClick={() => scrollToSection("trends")}
+            </Link>
+            <Link
+              to="/archive"
               className={`text-sm font-medium transition-colors hover:text-primary ${
-                activeSection === "trends" ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
+                isActive("/archive") ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
               }`}
             >
               Archive
-            </button>
-            <button
-              onClick={() => scrollToSection("education")}
+            </Link>
+            <Link
+              to="/learn"
               className={`text-sm font-medium transition-colors hover:text-primary ${
-                activeSection === "education" ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
+                isActive("/learn") ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
               }`}
             >
               Learn
-            </button>
-            <button
-              onClick={() => scrollToSection("authority")}
+            </Link>
+            <Link
+              to="/authority"
               className={`text-sm font-medium transition-colors hover:text-primary ${
-                activeSection === "authority" ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
+                isActive("/authority") ? "text-primary border-b-2 border-primary pb-1" : "text-muted-foreground"
               }`}
             >
               Authority
-            </button>
+            </Link>
             
             {/* Language Chip */}
             <div className="px-3 py-1 bg-secondary text-secondary-foreground rounded-full text-sm font-medium">
