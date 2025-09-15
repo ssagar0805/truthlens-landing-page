@@ -21,91 +21,95 @@ import {
   History,
   Image,
   Zap,
-  MoreHorizontal
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import TruthLensHeader from "@/components/TruthLensHeader";
 import TruthLensFooter from "@/components/TruthLensFooter";
 
+interface AnalysisData {
+  content?: string;
+  risk?: {
+    level: string;
+    score: number;
+    confidence: number;
+    verdict: string;
+  };
+  sources?: Array<{
+    name: string;
+    credibility: string;
+    verified: boolean;
+    status: string;
+    url?: string;
+  }>;
+  languageIssues?: Array<{
+    type: string;
+    severity: string;
+    description: string;
+    examples?: string[];
+  }>;
+  factChecks?: Array<{
+    claim: string;
+    status: string;
+    details: string;
+  }>;
+  recommendations?: string[];
+  historicalContext?: string;
+  imageForensics?: string;
+  aiNarrative?: string;
+}
+
 const Results = () => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<'summary' | 'full'>('full');
+  const [isStreaming, setIsStreaming] = useState(false);
   const [streamingStep, setStreamingStep] = useState(0);
-  const [isStreaming, setIsStreaming] = useState(true);
   const [expandedCards, setExpandedCards] = useState<string[]>([]);
-
-  // Mock data - comprehensive analysis result
-  const mockData = {
-    content: "Breaking: Government announces new tax policy affecting middle-class families. The new policy will reportedly increase income tax rates by 15% for families earning between ₹5-10 lakhs annually, effective from next fiscal year. This comes amid growing concerns about fiscal deficit and public spending.",
-    
-    risk: {
-      level: "Medium",
-      color: "amber",
-      score: 72,
-      confidence: 87,
-      verdict: "Partially Misleading"
-    },
-    
-    sources: [
-      { name: "Government Official Website", credibility: "High", verified: true, status: "verified", url: "gov.in/policy" },
-      { name: "Economic Times", credibility: "High", verified: true, status: "verified", url: "economictimes.com" },
-      { name: "Local News Portal", credibility: "Medium", verified: true, status: "caution", url: "localnews.com" },
-      { name: "WhatsApp Forward", credibility: "Low", verified: false, status: "false", url: null },
-      { name: "Anonymous Blog", credibility: "Low", verified: false, status: "false", url: "random-blog.com" }
-    ],
-    
-    languageIssues: [
-      { type: "Sensational Language", severity: "Medium", description: "Uses emotionally charged words", examples: ["Breaking", "Shocking"] },
-      { type: "Vague Attribution", severity: "High", description: "No specific source attribution", examples: ["Sources say", "Reports suggest"] },
-      { type: "Urgency Markers", severity: "Low", description: "Creates false urgency", examples: ["Immediate", "Emergency"] }
-    ],
-    
-    factChecks: [
-      { claim: "Tax rate increase of 15%", status: "Partially True", details: "Official documents show 12% increase, not 15%" },
-      { claim: "Affects ₹5-10 lakh bracket", status: "False", details: "Policy affects ₹7-12 lakh bracket" },
-      { claim: "Effective next fiscal year", status: "True", details: "Confirmed in gazette notification" }
-    ],
-    
-    recommendations: [
-      "Cross-reference with official government press releases and gazette notifications",
-      "Check multiple credible news sources for consistent reporting", 
-      "Verify specific numbers and percentages from authoritative sources",
-      "Be cautious of sensational language and urgent framing",
-      "Look for official statements from relevant ministries"
-    ]
-  };
+  const [analysisData, setAnalysisData] = useState<AnalysisData>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const cardConfigs = [
-    { id: 'risk', title: 'Risk Assessment', icon: AlertTriangle, color: 'text-amber-600' },
-    { id: 'sources', title: 'Source Verification', icon: Shield, color: 'text-blue-600' },
-    { id: 'language', title: 'Language Analysis', icon: Search, color: 'text-purple-600' },
-    { id: 'facts', title: 'Fact Verification', icon: CheckCircle, color: 'text-green-600' },
-    { id: 'recommendations', title: 'Recommendations', icon: Brain, color: 'text-indigo-600' },
-    { id: 'context', title: 'Historical Context', icon: History, color: 'text-gray-600' },
-    { id: 'forensics', title: 'Image Forensics', icon: Image, color: 'text-pink-600' },
-    { id: 'narrative', title: 'AI Narrative Analysis', icon: Zap, color: 'text-orange-600' }
+    { id: 'risk', title: 'Risk Assessment', icon: AlertTriangle, color: 'text-amber-600', hasData: !!analysisData.risk },
+    { id: 'sources', title: 'Source Verification', icon: Shield, color: 'text-blue-600', hasData: !!analysisData.sources?.length },
+    { id: 'language', title: 'Language Analysis', icon: Search, color: 'text-purple-600', hasData: !!analysisData.languageIssues?.length },
+    { id: 'facts', title: 'Fact Verification', icon: CheckCircle, color: 'text-green-600', hasData: !!analysisData.factChecks?.length },
+    { id: 'recommendations', title: 'Recommendations', icon: Brain, color: 'text-indigo-600', hasData: !!analysisData.recommendations?.length },
+    { id: 'context', title: 'Historical Context', icon: History, color: 'text-gray-600', hasData: !!analysisData.historicalContext },
+    { id: 'forensics', title: 'Image Forensics', icon: Image, color: 'text-pink-600', hasData: !!analysisData.imageForensics },
+    { id: 'narrative', title: 'AI Narrative Analysis', icon: Zap, color: 'text-orange-600', hasData: !!analysisData.aiNarrative }
   ];
 
-  // Streaming simulation
+  const availableCards = cardConfigs.filter(card => card.hasData || ['risk', 'sources', 'language', 'facts', 'recommendations'].includes(card.id));
+
+  // Streaming simulation when data is received
   useEffect(() => {
-    if (viewMode === 'full' && isStreaming) {
+    if (isStreaming && analysisData && Object.keys(analysisData).length > 0) {
       const timer = setInterval(() => {
         setStreamingStep(prev => {
-          if (prev < cardConfigs.length) {
+          if (prev < availableCards.length) {
             return prev + 1;
           } else {
             setIsStreaming(false);
-            setExpandedCards(cardConfigs.slice(0, 5).map(c => c.id)); // Auto-expand first 5 cards
+            setExpandedCards(availableCards.slice(0, 3).map(c => c.id)); // Auto-expand first 3 cards
             clearInterval(timer);
             return prev;
           }
         });
-      }, 600);
+      }, 800);
       return () => clearInterval(timer);
     }
-  }, [viewMode, isStreaming]);
+  }, [isStreaming, analysisData, availableCards.length]);
 
-  const getRiskColor = (level: string) => {
-    switch (level.toLowerCase()) {
+  const toggleCard = (cardId: string) => {
+    setExpandedCards(prev => 
+      prev.includes(cardId) 
+        ? prev.filter(id => id !== cardId)
+        : [...prev, cardId]
+    );
+  };
+
+  const getRiskColor = (level?: string) => {
+    switch (level?.toLowerCase()) {
       case 'high': return { bg: 'bg-red-50', border: 'border-red-200', text: 'text-red-700' };
       case 'medium': return { bg: 'bg-amber-50', border: 'border-amber-200', text: 'text-amber-700' };
       case 'low': return { bg: 'bg-green-50', border: 'border-green-200', text: 'text-green-700' };
@@ -122,12 +126,175 @@ const Results = () => {
     }
   };
 
+  const renderEmptyState = () => (
+    <div className="text-center py-12">
+      <div className="flex justify-center mb-4">
+        <div className="flex space-x-1">
+          <div className="w-3 h-3 bg-primary/60 rounded-full animate-bounce"></div>
+          <div className="w-3 h-3 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+          <div className="w-3 h-3 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-muted-foreground mb-2">Awaiting Analysis...</h3>
+      <p className="text-sm text-muted-foreground">
+        Connect to backend to see analysis results here
+      </p>
+    </div>
+  );
+
+  const renderCardContent = (cardId: string) => {
+    switch (cardId) {
+      case 'risk':
+        if (!analysisData.risk) return renderEmptyState();
+        return (
+          <div className="pt-4 space-y-4">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-semibold mb-3">Credibility Score</h4>
+                <Progress value={analysisData.risk.score} className="h-4 mb-2" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Low</span>
+                  <span className="font-bold text-lg">{analysisData.risk.score}%</span>
+                  <span className="text-muted-foreground">High</span>
+                </div>
+              </div>
+              <div>
+                <h4 className="font-semibold mb-3">Analysis Confidence</h4>
+                <Progress value={analysisData.risk.confidence} className="h-4 mb-2" />
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Low</span>
+                  <span className="font-bold text-lg">{analysisData.risk.confidence}%</span>
+                  <span className="text-muted-foreground">High</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'sources':
+        if (!analysisData.sources?.length) return renderEmptyState();
+        return (
+          <div className="pt-4 space-y-3">
+            {analysisData.sources.map((source, idx) => (
+              <div key={idx} className="flex items-center justify-between p-4 bg-background rounded-lg border">
+                <div className="flex items-center gap-3">
+                  {getStatusIcon(source.status)}
+                  <div>
+                    <div className="font-medium">{source.name}</div>
+                    {source.url && <div className="text-xs text-muted-foreground">{source.url}</div>}
+                  </div>
+                </div>
+                <Badge variant="outline" className={
+                  source.credibility === 'High' ? 'bg-green-50 text-green-700 border-green-200' :
+                  source.credibility === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                  'bg-red-50 text-red-700 border-red-200'
+                }>
+                  {source.credibility}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'language':
+        if (!analysisData.languageIssues?.length) return renderEmptyState();
+        return (
+          <div className="pt-4 space-y-4">
+            {analysisData.languageIssues.map((issue, idx) => (
+              <div key={idx} className="p-4 border rounded-lg">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1">
+                    <h4 className="font-medium">{issue.type}</h4>
+                    <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
+                  </div>
+                  <Badge variant="outline" className={
+                    issue.severity === 'High' ? 'bg-red-50 text-red-700 border-red-200' :
+                    issue.severity === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                    'bg-green-50 text-green-700 border-green-200'
+                  }>
+                    {issue.severity}
+                  </Badge>
+                </div>
+                {issue.examples && issue.examples.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {issue.examples.map((example, i) => (
+                      <span key={i} className="px-2 py-1 bg-secondary/50 rounded text-xs">
+                        "{example}"
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'facts':
+        if (!analysisData.factChecks?.length) return renderEmptyState();
+        return (
+          <div className="pt-4 space-y-4">
+            {analysisData.factChecks.map((fact, idx) => (
+              <div key={idx} className="p-4 border rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  {fact.status === 'True' && <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />}
+                  {fact.status === 'False' && <XCircle className="w-5 h-5 text-red-600 mt-0.5" />}
+                  {fact.status === 'Partially True' && <AlertTriangle className="w-5 h-5 text-amber-600 mt-0.5" />}
+                  <div className="flex-1">
+                    <h4 className="font-medium mb-1">"{fact.claim}"</h4>
+                    <Badge variant="outline" className={
+                      fact.status === 'True' ? 'bg-green-50 text-green-700 border-green-200' :
+                      fact.status === 'False' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-amber-50 text-amber-700 border-amber-200'
+                    }>
+                      {fact.status}
+                    </Badge>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground pl-8">{fact.details}</p>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'recommendations':
+        if (!analysisData.recommendations?.length) return renderEmptyState();
+        return (
+          <div className="pt-4 space-y-3">
+            {analysisData.recommendations.map((rec, idx) => (
+              <div key={idx} className="flex gap-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100">
+                <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">
+                  {idx + 1}
+                </div>
+                <p className="text-sm leading-relaxed">{rec}</p>
+              </div>
+            ))}
+          </div>
+        );
+
+      case 'context':
+      case 'forensics':
+      case 'narrative':
+        return (
+          <div className="pt-4 text-center py-8">
+            <div className="text-muted-foreground">
+              <Clock className="w-8 h-8 mx-auto mb-2" />
+              <p className="text-sm">Coming Soon</p>
+              <p className="text-xs mt-1">This analysis module will be available in future updates</p>
+            </div>
+          </div>
+        );
+
+      default:
+        return renderEmptyState();
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <TruthLensHeader />
       <main className="flex-1">
         {/* Header Section */}
-        <section className="bg-gradient-to-br from-truthlens-primary via-truthlens-primary/90 to-truthlens-secondary border-b border-border">
+        <section className="bg-gradient-to-br from-primary via-primary/90 to-primary/80 border-b border-border">
           <div className="container mx-auto px-4 lg:px-6">
             <div className="flex items-center justify-between py-6">
               <div className="flex items-center gap-4">
@@ -142,7 +309,7 @@ const Results = () => {
                 </Button>
                 <div>
                   <h1 className="text-2xl font-bold text-white">Analysis Results</h1>
-                  <p className="text-white/80 text-sm">AI-powered misinformation detection complete</p>
+                  <p className="text-white/80 text-sm">AI-powered misinformation detection</p>
                 </div>
               </div>
               
@@ -152,7 +319,7 @@ const Results = () => {
                   size="sm"
                   variant={viewMode === 'summary' ? 'default' : 'ghost'}
                   onClick={() => setViewMode('summary')}
-                  className={viewMode === 'summary' ? 'bg-white text-truthlens-primary hover:bg-white/90' : 'text-white/90 hover:bg-white/10'}
+                  className={viewMode === 'summary' ? 'bg-white text-primary hover:bg-white/90' : 'text-white/90 hover:bg-white/10'}
                 >
                   <Eye className="w-4 h-4 mr-1" />
                   Quick Summary
@@ -162,10 +329,12 @@ const Results = () => {
                   variant={viewMode === 'full' ? 'default' : 'ghost'}
                   onClick={() => {
                     setViewMode('full');
-                    setIsStreaming(true);
-                    setStreamingStep(0);
+                    if (Object.keys(analysisData).length > 0) {
+                      setIsStreaming(true);
+                      setStreamingStep(0);
+                    }
                   }}
-                  className={viewMode === 'full' ? 'bg-white text-truthlens-primary hover:bg-white/90' : 'text-white/90 hover:bg-white/10'}
+                  className={viewMode === 'full' ? 'bg-white text-primary hover:bg-white/90' : 'text-white/90 hover:bg-white/10'}
                 >
                   <FileText className="w-4 h-4 mr-1" />
                   Full Analysis
@@ -181,56 +350,71 @@ const Results = () => {
             {/* Quick Summary View */}
             {viewMode === 'summary' && (
               <div className="space-y-6">
-                {/* Main Verdict Card */}
-                <Card className="border-l-4 border-l-amber-500">
-                  <CardContent className="pt-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <div>
-                        <h3 className="text-lg font-semibold mb-2">Final Verdict</h3>
-                        <p className="text-2xl font-bold text-amber-600">{mockData.risk.verdict}</p>
+                {analysisData.risk ? (
+                  <Card className={`border-l-4 ${getRiskColor(analysisData.risk.level).border.replace('border-', 'border-l-')}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <div>
+                          <h3 className="text-lg font-semibold mb-2">Final Verdict</h3>
+                          <p className="text-2xl font-bold text-amber-600">{analysisData.risk.verdict}</p>
+                        </div>
+                        <Badge variant="outline" className={`${getRiskColor(analysisData.risk.level).bg} ${getRiskColor(analysisData.risk.level).border} ${getRiskColor(analysisData.risk.level).text} px-4 py-2 text-sm font-semibold`}>
+                          {analysisData.risk.level} Risk
+                        </Badge>
                       </div>
-                      <Badge variant="outline" className={`${getRiskColor(mockData.risk.level).bg} ${getRiskColor(mockData.risk.level).border} ${getRiskColor(mockData.risk.level).text} px-4 py-2 text-sm font-semibold`}>
-                        {mockData.risk.level} Risk
-                      </Badge>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-2 gap-6 mb-6">
-                      <div>
-                        <h4 className="font-semibold mb-2">Credibility Score</h4>
-                        <Progress value={mockData.risk.score} className="h-3 mb-2" />
-                        <span className="font-bold text-lg">{mockData.risk.score}%</span>
+                      
+                      <div className="grid md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                          <h4 className="font-semibold mb-2">Credibility Score</h4>
+                          <Progress value={analysisData.risk.score} className="h-3 mb-2" />
+                          <span className="font-bold text-lg">{analysisData.risk.score}%</span>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold mb-2">Analysis Confidence</h4>
+                          <Progress value={analysisData.risk.confidence} className="h-3 mb-2" />
+                          <span className="font-bold text-lg">{analysisData.risk.confidence}%</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-semibold mb-2">Analysis Confidence</h4>
-                        <Progress value={mockData.risk.confidence} className="h-3 mb-2" />
-                        <span className="font-bold text-lg">{mockData.risk.confidence}%</span>
-                      </div>
-                    </div>
 
-                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                      <h4 className="font-semibold text-amber-800 mb-2">Key Recommendation</h4>
-                      <p className="text-amber-700">{mockData.recommendations[0]}</p>
-                    </div>
-                  </CardContent>
-                </Card>
+                      {analysisData.recommendations?.[0] && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <h4 className="font-semibold text-amber-800 mb-2">Key Recommendation</h4>
+                          <p className="text-amber-700">{analysisData.recommendations[0]}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardContent className="pt-6">
+                      {renderEmptyState()}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Quick Stats */}
                 <div className="grid md:grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="pt-6 text-center">
-                      <div className="text-2xl font-bold text-green-600">{mockData.sources.filter(s => s.credibility === 'High').length}</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        {analysisData.sources?.filter(s => s.credibility === 'High').length || 0}
+                      </div>
                       <div className="text-sm text-muted-foreground">High Credibility Sources</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="pt-6 text-center">
-                      <div className="text-2xl font-bold text-red-600">{mockData.languageIssues.filter(p => p.severity === 'High').length}</div>
+                      <div className="text-2xl font-bold text-red-600">
+                        {analysisData.languageIssues?.filter(p => p.severity === 'High').length || 0}
+                      </div>
                       <div className="text-sm text-muted-foreground">Critical Issues Found</div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="pt-6 text-center">
-                      <div className="text-2xl font-bold text-blue-600">{mockData.factChecks.length}</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {analysisData.factChecks?.length || 0}
+                      </div>
                       <div className="text-sm text-muted-foreground">Claims Fact-Checked</div>
                     </CardContent>
                   </Card>
@@ -242,23 +426,34 @@ const Results = () => {
             {viewMode === 'full' && (
               <div className="space-y-6">
                 {/* Analyzed Content */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Analyzed Content</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="bg-secondary/10 rounded-lg p-4 border-l-4 border-l-blue-500">
-                      <p className="text-muted-foreground italic leading-relaxed">
-                        "{mockData.content}"
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
+                {analysisData.content ? (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Analyzed Content</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-secondary/10 rounded-lg p-4 border-l-4 border-l-blue-500">
+                        <p className="text-muted-foreground italic leading-relaxed">
+                          "{analysisData.content}"
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Analyzed Content</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {renderEmptyState()}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* Modular Analysis Cards */}
                 <div className="space-y-4">
-                  {cardConfigs.map((config, index) => {
-                    const isVisible = streamingStep > index;
+                  {availableCards.map((config, index) => {
+                    const isVisible = !isStreaming || streamingStep > index;
                     const isExpanded = expandedCards.includes(config.id);
                     
                     if (!isVisible) return null;
@@ -267,13 +462,7 @@ const Results = () => {
                       <Card key={config.id} className="border rounded-lg overflow-hidden">
                         <div 
                           className="px-6 py-4 cursor-pointer hover:bg-secondary/5 transition-colors"
-                          onClick={() => {
-                            if (isExpanded) {
-                              setExpandedCards(prev => prev.filter(id => id !== config.id));
-                            } else {
-                              setExpandedCards(prev => [...prev, config.id]);
-                            }
-                          }}
+                          onClick={() => toggleCard(config.id)}
                         >
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
@@ -287,137 +476,18 @@ const Results = () => {
                                 </div>
                               )}
                             </div>
-                            <Button variant="ghost" size="sm">
-                              {isExpanded ? "Collapse" : "Expand"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                              {!config.hasData && config.id !== 'context' && config.id !== 'forensics' && config.id !== 'narrative' && (
+                                <Badge variant="outline" className="text-xs">No Data</Badge>
+                              )}
+                              {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </div>
                           </div>
                         </div>
                         
                         {isExpanded && (
                           <div className="px-6 pb-6 border-t bg-secondary/2">
-                            {config.id === 'risk' && (
-                              <div className="pt-4 space-y-4">
-                                <div className="grid md:grid-cols-2 gap-6">
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Credibility Score</h4>
-                                    <Progress value={mockData.risk.score} className="h-4 mb-2" />
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">Low</span>
-                                      <span className="font-bold text-lg">{mockData.risk.score}%</span>
-                                      <span className="text-muted-foreground">High</span>
-                                    </div>
-                                  </div>
-                                  <div>
-                                    <h4 className="font-semibold mb-3">Analysis Confidence</h4>
-                                    <Progress value={mockData.risk.confidence} className="h-4 mb-2" />
-                                    <div className="flex justify-between text-sm">
-                                      <span className="text-muted-foreground">Low</span>
-                                      <span className="font-bold text-lg">{mockData.risk.confidence}%</span>
-                                      <span className="text-muted-foreground">High</span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {config.id === 'sources' && (
-                              <div className="pt-4 space-y-3">
-                                {mockData.sources.map((source, idx) => (
-                                  <div key={idx} className="flex items-center justify-between p-4 bg-background rounded-lg border">
-                                    <div className="flex items-center gap-3">
-                                      {getStatusIcon(source.status)}
-                                      <div>
-                                        <div className="font-medium">{source.name}</div>
-                                        {source.url && <div className="text-xs text-muted-foreground">{source.url}</div>}
-                                      </div>
-                                    </div>
-                                    <Badge variant="outline" className={
-                                      source.credibility === 'High' ? 'bg-green-50 text-green-700 border-green-200' :
-                                      source.credibility === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                      'bg-red-50 text-red-700 border-red-200'
-                                    }>
-                                      {source.credibility}
-                                    </Badge>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {config.id === 'language' && (
-                              <div className="pt-4 space-y-4">
-                                {mockData.languageIssues.map((issue, idx) => (
-                                  <div key={idx} className="p-4 border rounded-lg">
-                                    <div className="flex items-start justify-between mb-3">
-                                      <div className="flex-1">
-                                        <h4 className="font-medium">{issue.type}</h4>
-                                        <p className="text-sm text-muted-foreground mt-1">{issue.description}</p>
-                                      </div>
-                                      <Badge variant="outline" className={
-                                        issue.severity === 'High' ? 'bg-red-50 text-red-700 border-red-200' :
-                                        issue.severity === 'Medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                        'bg-green-50 text-green-700 border-green-200'
-                                      }>
-                                        {issue.severity}
-                                      </Badge>
-                                    </div>
-                                    <div className="flex flex-wrap gap-2">
-                                      {issue.examples.map((example, i) => (
-                                        <span key={i} className="px-2 py-1 bg-secondary/20 rounded text-xs font-mono">
-                                          "{example}"
-                                        </span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {config.id === 'facts' && (
-                              <div className="pt-4 space-y-3">
-                                {mockData.factChecks.map((fact, idx) => (
-                                  <div key={idx} className="p-4 border rounded-lg">
-                                    <div className="flex items-start justify-between mb-2">
-                                      <h4 className="font-medium flex-1">"{fact.claim}"</h4>
-                                      <Badge variant="outline" className={
-                                        fact.status === 'True' ? 'bg-green-50 text-green-700 border-green-200' :
-                                        fact.status === 'Partially True' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                                        'bg-red-50 text-red-700 border-red-200'
-                                      }>
-                                        {fact.status}
-                                      </Badge>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">{fact.details}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-
-                            {config.id === 'recommendations' && (
-                              <div className="pt-4">
-                                <ol className="space-y-3">
-                                  {mockData.recommendations.map((rec, idx) => (
-                                    <li key={idx} className="flex gap-3">
-                                      <span className="flex-shrink-0 w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-sm font-medium">
-                                        {idx + 1}
-                                      </span>
-                                      <p className="text-sm">{rec}</p>
-                                    </li>
-                                  ))}
-                                </ol>
-                              </div>
-                            )}
-
-                            {(config.id === 'context' || config.id === 'forensics' || config.id === 'narrative') && (
-                              <div className="pt-4">
-                                <div className="flex items-center justify-center py-8 text-center">
-                                  <div>
-                                    <MoreHorizontal className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                                    <p className="text-muted-foreground">Coming Soon</p>
-                                    <p className="text-xs text-muted-foreground mt-1">This analysis module is under development</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
+                            {renderCardContent(config.id)}
                           </div>
                         )}
                       </Card>
@@ -427,25 +497,43 @@ const Results = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+            {/* Actions Section */}
+            <Card className="mt-8">
               <CardContent className="pt-6">
-                <div className="grid md:grid-cols-4 gap-4">
+                <h3 className="text-lg font-semibold mb-4">Actions</h3>
+                <div className="grid md:grid-cols-2 gap-4">
                   <Button 
-                    onClick={() => navigate('/')} 
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    size="lg" 
+                    onClick={() => navigate('/')}
+                    className="w-full"
                   >
+                    <ArrowLeft className="w-4 h-4 mr-2" />
                     Analyze Another
                   </Button>
-                  <Button variant="outline" className="border-amber-200 text-amber-700 hover:bg-amber-50">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                    onClick={() => {/* TODO: Implement flag for authority */}}
+                  >
                     <Flag className="w-4 h-4 mr-2" />
                     Flag for Authority
                   </Button>
-                  <Button variant="outline" className="border-green-200 text-green-700 hover:bg-green-50">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                    onClick={() => {/* TODO: Implement PDF download */}}
+                  >
                     <Download className="w-4 h-4 mr-2" />
-                    Download Report
+                    Download Report (PDF)
                   </Button>
-                  <Button variant="outline" className="border-purple-200 text-purple-700 hover:bg-purple-50">
+                  <Button 
+                    variant="outline" 
+                    size="lg"
+                    className="w-full"
+                    onClick={() => {/* TODO: Implement share results */}}
+                  >
                     <Share2 className="w-4 h-4 mr-2" />
                     Share Results
                   </Button>
