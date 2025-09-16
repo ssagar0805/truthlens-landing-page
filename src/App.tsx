@@ -8,6 +8,7 @@ import Archive from "./pages/Archive";
 import Authority from "./pages/Authority";
 import Learn from "./pages/Learn";
 import Results from "./pages/Results";
+import ImageResults from "./pages/ImageResults";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/authority" element={<Authority />} />
           <Route path="/learn" element={<Learn />} />
           <Route path="/results" element={<Results />} />
+          <Route path="/image-results" element={<ImageResults />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
